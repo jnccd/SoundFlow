@@ -74,11 +74,7 @@ public static class SoundMetadataReader
     /// <returns>A Result object containing either the AudioFormatInfo or an error.</returns>
     public static Result<SoundFormatInfo> Read(Stream stream, ReadOptions? options = null)
     {
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 1");
         options ??= new ReadOptions();
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 2");
         return GetReaderAndReadAsync(stream, options, false, true).GetAwaiter().GetResult();
     }
 
@@ -98,29 +94,19 @@ public static class SoundMetadataReader
     private static async Task<Result<SoundFormatInfo>> GetReaderAndReadAsync(Stream stream, ReadOptions options, bool async,
         bool leaveOpen = false)
     {
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 3");
         if (stream is not { CanRead: true } || !stream.CanSeek)
             return new ValidationError("Stream must be readable and seekable.");
 
         var originalPosition = stream.Position;
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 4");
         try
         {
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 5");
             if (stream.Length < 12)
                 return new CorruptChunkError("File", "File is too small to identify format.");
 
             var header = new byte[12];
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 6");
             var bytesRead = false
                 ? await stream.ReadAsync(header)
                 : stream.Read(header, 0, header.Length);
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 7");
 
             if (bytesRead < 4)
                 return new CorruptChunkError("File", "File is too small to read a header.");

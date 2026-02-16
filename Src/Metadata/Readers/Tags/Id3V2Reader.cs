@@ -13,55 +13,30 @@ internal class Id3V2Reader
     /// <returns>A tuple containing a boolean indicating if a tag was found, and the total size of the tag in bytes.</returns>
     public static async Task<(bool Found, long Size)> TryGetHeaderInfoAsync(Stream stream)
     {
-        Console.WriteLine("PRINTLINE: 37");
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 38");
         if (stream.Length < 10) return (false, 0);
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 39");
 
         var originalPosition = stream.Position;
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 40");
         try
         {
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 41");
             stream.Position = 0;
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 42");
             var header = new byte[10];
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 43");
             //var bytesRead = await stream.ReadAsync(header.AsMemory(0, 10));
             var bytesRead = stream.Read(header, 0, 10);
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 44");
 
             if (bytesRead < 10 || Encoding.ASCII.GetString(header, 0, 3) != "ID3")
             {
                 return (false, 0);
             }
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 45");
 
             // Synchsafe integer conversion for tag body size
             var tagBodySize = (header[6] << 21) | (header[7] << 14) | (header[8] << 7) | header[9];
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 46");
             var totalTagSize = 10 + tagBodySize;
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 47");
 
             return (true, totalTagSize);
         }
         finally
         {
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 48");
             stream.Position = originalPosition;
-            Task.Delay(43).Wait();
-            Console.WriteLine("PRINTLINE: 49");
         }
     }
 

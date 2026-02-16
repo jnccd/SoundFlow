@@ -25,19 +25,10 @@ public sealed class StreamDataProvider : ISoundDataProvider
     /// <param name="options">Optional configuration for metadata reading.</param>
     public StreamDataProvider(AudioEngine engine, Stream stream, ReadOptions? options = null)
     {
-        Console.WriteLine("PRINTLINE: 50");
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 51");
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 52");
         options ??= new ReadOptions();
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 53");
 
         var formatInfoResult = SoundMetadataReader.Read(_stream, options);
-        Task.Delay(43).Wait();
-        Console.WriteLine("PRINTLINE: 54");
 
         if (formatInfoResult is { IsSuccess: true, Value: not null })
         {

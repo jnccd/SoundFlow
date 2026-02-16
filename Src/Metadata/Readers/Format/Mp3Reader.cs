@@ -47,53 +47,101 @@ internal class Mp3Reader : BaseSoundFormatReader
 
     public override async Task<Result<SoundFormatInfo>> ReadAsync(Stream stream, ReadOptions options)
     {
-        var info = new SoundFormatInfo 
-        { 
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 8");
+        var info = new SoundFormatInfo
+        {
             FormatName = "MP3",
             CodecName = "MPEG Layer III",
-            FormatIdentifier = "mp3", 
+            FormatIdentifier = "mp3",
             IsLossless = false
         };
-        
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 9");
+
         var streamLength = stream.Length;
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 10");
 
         // Check for an ID3v2 tag to determine the correct audio data starting offset.
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 11");
         var (isTagPresent, tagSize) = await Id3V2Reader.TryGetHeaderInfoAsync(stream);
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 12");
         var audioDataStart = isTagPresent ? tagSize : 0;
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 13");
 
         // If the user wants to read tags and a tag is present, fully parse it.
         if (options.ReadTags && isTagPresent)
         {
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 14");
             var id3Reader = new Id3V2Reader();
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 15");
             var id3Result = await id3Reader.ReadAsync(stream, options); // This will parse the full tag.
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 16");
             if (id3Result.IsFailure) return Result<SoundFormatInfo>.Fail(id3Result.Error!);
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 17");
             info.Tags = id3Result.Value.Item1;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 18");
         }
 
         // If no ID3v2 tags were found, try to read ID3v1 tags from the end of the file.
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 19");
         if (info.Tags == null && options.ReadTags) info.Tags = await TryReadId3V1TagAsync(stream);
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 20");
 
         stream.Position = audioDataStart;
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 21");
 
         // Find first frame header
         var headerBuffer = new byte[4];
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 22");
         while (stream.Position < streamLength - 4)
         {
-            if (await stream.ReadAsync(headerBuffer.AsMemory(0, 1)) == 0) break;
+            if (stream.Read(headerBuffer, 0, 1) == 0) break;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 23");
             if (headerBuffer[0] != 0xFF) continue;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 24");
 
-            if (await stream.ReadAsync(headerBuffer.AsMemory(1, 1)) == 0) break;
+            if (stream.Read(headerBuffer, 1, 1) == 0) break;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 25");
             if ((headerBuffer[1] & 0xE0) != 0xE0) continue;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 26");
 
             // Found a sync word, read rest of header and process
-            if (await stream.ReadAsync(headerBuffer.AsMemory(2, 2)) != 2) continue;
+            if (stream.Read(headerBuffer, 2, 2) != 2) continue;
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 27");
             var parseResult = ParseFrameHeader(headerBuffer, info);
-            if(parseResult.IsFailure) return Result<SoundFormatInfo>.Fail(parseResult.Error!);
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 28");
+            if (parseResult.IsFailure) return Result<SoundFormatInfo>.Fail(parseResult.Error!);
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 29");
 
             // Try to read VBR header regardless of accuracy setting.
             try
             {
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 30");
                 await TryReadVbrHeaderAsync(stream, headerBuffer, info);
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 31");
             }
             catch (EndOfStreamException ex)
             {
@@ -101,11 +149,21 @@ internal class Mp3Reader : BaseSoundFormatReader
             }
 
             // Fallback estimation if no VBR header was found
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 32");
             if (info.Duration == TimeSpan.Zero && info.Bitrate > 0)
             {
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 33");
                 var audioDataLength = streamLength - audioDataStart;
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 34");
                 info.Duration = TimeSpan.FromSeconds((double)audioDataLength * 8 / info.Bitrate);
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 35");
                 info.BitrateMode = BitrateMode.CBR; // Assumed constant bitrate if vbr header not found
+                Task.Delay(43).Wait();
+                Console.WriteLine("PRINTLINE: 36");
             }
 
             return info;
@@ -142,7 +200,7 @@ internal class Mp3Reader : BaseSoundFormatReader
                 mpegVersionIndex = 2;
                 info.ContainerVersion = "MPEG 1";
                 break;
-            default: 
+            default:
                 return new CorruptFrameError("MP3", "Invalid MPEG version.");
         }
 
@@ -179,14 +237,14 @@ internal class Mp3Reader : BaseSoundFormatReader
         }
         else // MPEG 2 or 2.5
         {
-            layerBitrateTable = layerId == 1 ? BitrateTable : 
+            layerBitrateTable = layerId == 1 ? BitrateTable :
                                new[,] { { 0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160 } };
         }
 
         info.Bitrate = layerBitrateTable[0, bitrateIndex] * 1000;
         info.SampleRate = SampleRateTable[mpegVersionIndex, sampleRateIndex];
         info.ChannelCount = channelMode == 3 ? 1 : 2;
-        
+
         // Add layer information to format details
         info.FormatName = $"MP3 ({layerName})";
         return Result.Ok();

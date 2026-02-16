@@ -13,8 +13,8 @@ namespace SoundFlow.Providers;
 /// </summary>
 public sealed class StreamDataProvider : ISoundDataProvider
 {
-    private readonly ISoundDecoder _decoder;
-    private readonly Stream _stream;
+    private ISoundDecoder _decoder;
+    private Stream _stream;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="StreamDataProvider" /> class by automatically detecting the format.
@@ -25,10 +25,19 @@ public sealed class StreamDataProvider : ISoundDataProvider
     /// <param name="options">Optional configuration for metadata reading.</param>
     public StreamDataProvider(AudioEngine engine, Stream stream, ReadOptions? options = null)
     {
+        Console.WriteLine("PRINTLINE: 50");
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 51");
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 52");
         options ??= new ReadOptions();
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 53");
 
         var formatInfoResult = SoundMetadataReader.Read(_stream, options);
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 54");
 
         if (formatInfoResult is { IsSuccess: true, Value: not null })
         {
@@ -63,7 +72,7 @@ public sealed class StreamDataProvider : ISoundDataProvider
                     : TimeSpan.Zero
             };
         }
-        
+
         SampleRate = _decoder.SampleRate;
         _decoder.EndOfStreamReached += EndOfStreamReached;
     }
@@ -77,14 +86,14 @@ public sealed class StreamDataProvider : ISoundDataProvider
     public StreamDataProvider(AudioEngine engine, AudioFormat format, Stream stream)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        
+
         var formatInfoResult = SoundMetadataReader.Read(_stream, new ReadOptions
         {
-            ReadTags = false, 
-            ReadAlbumArt = false, 
+            ReadTags = false,
+            ReadAlbumArt = false,
             DurationAccuracy = DurationAccuracy.FastEstimate
         });
-        
+
         if (formatInfoResult is { IsSuccess: true, Value: not null })
         {
             // Path 1: Metadata read successfully. Use the discovered formatId with the user's target format.
@@ -97,7 +106,7 @@ public sealed class StreamDataProvider : ISoundDataProvider
             // Path 2: Metadata read failed. Fall back to probing, providing the user's format as a hint.
             _stream.Position = 0;
             _decoder = engine.CreateDecoder(_stream, out var detectedFormat, format);
-                
+
             // Create a basic FormatInfo from what the decoder found.
             FormatInfo = new SoundFormatInfo
             {
@@ -110,7 +119,7 @@ public sealed class StreamDataProvider : ISoundDataProvider
                     : TimeSpan.Zero
             };
         }
-        
+
         SampleRate = _decoder.SampleRate;
 
         _decoder.EndOfStreamReached += EndOfStreamReached;
@@ -131,13 +140,13 @@ public sealed class StreamDataProvider : ISoundDataProvider
     public SampleFormat SampleFormat => _decoder.SampleFormat;
 
     /// <inheritdoc />
-    public int SampleRate { get; }
+    public int SampleRate { get; set; }
 
     /// <inheritdoc />
     public bool IsDisposed { get; private set; }
 
     /// <inheritdoc />
-    public SoundFormatInfo? FormatInfo { get; }
+    public SoundFormatInfo? FormatInfo { get; set; }
 
     /// <inheritdoc />
     public event EventHandler<EventArgs>? EndOfStreamReached;

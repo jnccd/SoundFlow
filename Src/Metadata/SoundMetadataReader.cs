@@ -21,9 +21,9 @@ public static class SoundMetadataReader
     public static Result<SoundFormatInfo> Read(string filePath, ReadOptions? options = null)
     {
         options ??= new ReadOptions();
-        if (!File.Exists(filePath)) 
+        if (!File.Exists(filePath))
             return new NotFoundError("File", $"The file was not found at path: {filePath}");
-        
+
         try
         {
             using var stream = File.OpenRead(filePath);
@@ -48,9 +48,9 @@ public static class SoundMetadataReader
     public static async Task<Result<SoundFormatInfo>> ReadAsync(string filePath, ReadOptions? options = null)
     {
         options ??= new ReadOptions();
-        if (!File.Exists(filePath)) 
+        if (!File.Exists(filePath))
             return new NotFoundError("File", $"The file was not found at path: {filePath}");
-        
+
         try
         {
             var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
@@ -74,7 +74,11 @@ public static class SoundMetadataReader
     /// <returns>A Result object containing either the AudioFormatInfo or an error.</returns>
     public static Result<SoundFormatInfo> Read(Stream stream, ReadOptions? options = null)
     {
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 1");
         options ??= new ReadOptions();
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 2");
         return GetReaderAndReadAsync(stream, options, false, true).GetAwaiter().GetResult();
     }
 
@@ -94,25 +98,35 @@ public static class SoundMetadataReader
     private static async Task<Result<SoundFormatInfo>> GetReaderAndReadAsync(Stream stream, ReadOptions options, bool async,
         bool leaveOpen = false)
     {
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 3");
         if (stream is not { CanRead: true } || !stream.CanSeek)
             return new ValidationError("Stream must be readable and seekable.");
 
         var originalPosition = stream.Position;
+        Task.Delay(43).Wait();
+        Console.WriteLine("PRINTLINE: 4");
         try
         {
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 5");
             if (stream.Length < 12)
                 return new CorruptChunkError("File", "File is too small to identify format.");
-            
+
             var header = new byte[12];
-            var bytesRead = async
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 6");
+            var bytesRead = false
                 ? await stream.ReadAsync(header)
                 : stream.Read(header, 0, header.Length);
+            Task.Delay(43).Wait();
+            Console.WriteLine("PRINTLINE: 7");
 
             if (bytesRead < 4)
                 return new CorruptChunkError("File", "File is too small to read a header.");
 
             // First, try to identify the format from the beginning of the file.
-            var reader = GetReader(header);
+            Mp3Reader reader = GetReader(header) as Mp3Reader;
 
             // If a format is not found, it might be because of an ID3 tag.
             // Check for an ID3 tag and try to identify the format after it.
@@ -130,7 +144,7 @@ public static class SoundMetadataReader
                     if (bytesRead >= 4)
                     {
                         // Try to identify the format again from the audio data header.
-                        reader = GetReader(audioHeader);
+                        reader = GetReader(audioHeader) as Mp3Reader;
                     }
                 }
             }
@@ -140,7 +154,7 @@ public static class SoundMetadataReader
 
             if (reader == null)
                 return new UnsupportedFormatError("Could not identify format from file header.");
-            
+
             return async
                 ? await reader.ReadAsync(stream, options)
                 : reader.Read(stream, options);

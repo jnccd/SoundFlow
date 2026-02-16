@@ -348,7 +348,7 @@ internal class Mp3Reader : BaseSoundFormatReader
         {
             stream.Position = stream.Length - 128;
             var buffer = new byte[128];
-            if (await stream.ReadAsync(buffer) < 128) return null;
+            if (stream.Read(buffer) < 128) return null;
 
             if (Encoding.ASCII.GetString(buffer, 0, 3) != "TAG") return null;
 

@@ -12,9 +12,9 @@ internal class OggReader : BaseSoundFormatReader
     {
         var info = new SoundFormatInfo
         {
-            FormatName = "Ogg", 
-            FormatIdentifier = "ogg", 
-            IsLossless = false, 
+            FormatName = "Ogg",
+            FormatIdentifier = "ogg",
+            IsLossless = false,
             BitrateMode = BitrateMode.VBR
         };
 
@@ -43,24 +43,24 @@ internal class OggReader : BaseSoundFormatReader
                 switch (info.CodecName)
                 {
                     case "Vorbis" when commentPacket.Length > 7 && commentPacket[0] == 0x03:
-                    {
-                        using var memStream = new MemoryStream(commentPacket);
-                        memStream.Position = 7; // Skip packet type and "vorbis"
-                        var vorbisResult = new VorbisCommentReader().Read(memStream, memStream.Length - 7, options);
-                        if(vorbisResult.IsFailure) return Result<SoundFormatInfo>.Fail(vorbisResult.Error!);
-                        info.Tags = vorbisResult.Value;
-                        break;
-                    }
+                        {
+                            using var memStream = new MemoryStream(commentPacket);
+                            memStream.Position = 7; // Skip packet type and "vorbis"
+                            var vorbisResult = new VorbisCommentReader().Read(memStream, memStream.Length - 7, options);
+                            if (vorbisResult.IsFailure) return Result<SoundFormatInfo>.Fail(vorbisResult.Error!);
+                            info.Tags = vorbisResult.Value;
+                            break;
+                        }
                     case "Opus" when commentPacket.Length > 8 &&
                                      Encoding.ASCII.GetString(commentPacket, 0, 8) == "OpusTags":
-                    {
-                        using var memStream = new MemoryStream(commentPacket);
-                        memStream.Position = 8; // Skip "OpusTags"
-                        var vorbisResult = new VorbisCommentReader().Read(memStream, memStream.Length - 8, options);
-                        if(vorbisResult.IsFailure) return Result<SoundFormatInfo>.Fail(vorbisResult.Error!);
-                        info.Tags = vorbisResult.Value;
-                        break;
-                    }
+                        {
+                            using var memStream = new MemoryStream(commentPacket);
+                            memStream.Position = 8; // Skip "OpusTags"
+                            var vorbisResult = new VorbisCommentReader().Read(memStream, memStream.Length - 8, options);
+                            if (vorbisResult.IsFailure) return Result<SoundFormatInfo>.Fail(vorbisResult.Error!);
+                            info.Tags = vorbisResult.Value;
+                            break;
+                        }
                 }
             }
 
@@ -83,7 +83,7 @@ internal class OggReader : BaseSoundFormatReader
         {
             return new CorruptChunkError("Ogg Page", "File is truncated or a page segment is incorrect.", ex);
         }
-        
+
         return info;
     }
 
@@ -115,10 +115,10 @@ internal class OggReader : BaseSoundFormatReader
         var page = new OggPage();
 
         var fourByteBuffer = new byte[4];
-        while (await stream.ReadAsync(fourByteBuffer.AsMemory(0, 1)) > 0)
+        while (stream.Read(fourByteBuffer, 0, 1) > 0)
         {
             if (fourByteBuffer[0] == 'O')
-                if (await stream.ReadAsync(fourByteBuffer.AsMemory(1, 3)) == 3 &&
+                if (stream.Read(fourByteBuffer, 1, 3) == 3 &&
                     fourByteBuffer[1] == 'g' && fourByteBuffer[2] == 'g' && fourByteBuffer[3] == 'S')
                 {
                     stream.Position -= 4;
@@ -129,7 +129,7 @@ internal class OggReader : BaseSoundFormatReader
         }
 
         var headerBytes = new byte[27];
-        if (await stream.ReadAsync(headerBytes.AsMemory(0, 27)) < 27) return null;
+        if (stream.Read(headerBytes, 0, 27) < 27) return null;
 
         page.GranulePosition = BitConverter.ToInt64(headerBytes, 6);
         int pageSegments = headerBytes[26];
@@ -155,7 +155,7 @@ internal class OggReader : BaseSoundFormatReader
             stream.Seek(-bufferSize, SeekOrigin.End);
 
         var buffer = new byte[bufferSize];
-        var bytesRead = await stream.ReadAsync(buffer.AsMemory(0, bufferSize));
+        var bytesRead = stream.Read(buffer, 0, bufferSize);
 
         for (var i = bytesRead - 27; i >= 0; i--)
             if (buffer[i] == 'O' && buffer[i + 1] == 'g' && buffer[i + 2] == 'g' && buffer[i + 3] == 'S')

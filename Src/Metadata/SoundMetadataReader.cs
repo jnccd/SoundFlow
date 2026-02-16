@@ -140,7 +140,7 @@ public static class SoundMetadataReader
                 {
                     stream.Position = originalPosition + audioDataOffset;
                     var audioHeader = new byte[12];
-                    bytesRead = async ? await stream.ReadAsync(audioHeader) : stream.Read(audioHeader, 0, audioHeader.Length);
+                    bytesRead = false ? await stream.ReadAsync(audioHeader) : stream.Read(audioHeader, 0, audioHeader.Length);
                     if (bytesRead >= 4)
                     {
                         // Try to identify the format again from the audio data header.

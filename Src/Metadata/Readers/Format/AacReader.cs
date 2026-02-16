@@ -22,7 +22,7 @@ internal class AacReader : BaseSoundFormatReader
             BitsPerSample = 0, // Not applicable
             IsLossless = false,
         };
-        
+
         long audioDataStart = 0;
         if (options.ReadTags)
         {
@@ -30,22 +30,22 @@ internal class AacReader : BaseSoundFormatReader
             var id3Result = await id3Reader.ReadAsync(stream, options);
             if (id3Result.IsFailure) return Result<SoundFormatInfo>.Fail(id3Result.Error!);
             var (tag, tagSize) = id3Result.Value;
-            
+
             info.Tags = tag;
             audioDataStart = tagSize;
         }
         stream.Position = audioDataStart;
-        
+
         var firstFrameHeader = await FindNextFrameHeaderAsync(stream);
         if (firstFrameHeader == null) return new HeaderNotFoundError("AAC ADTS Frame");
 
         // Get fundamental properties from the first frame
         var parseResult = ParseFrameHeader(firstFrameHeader, out var sampleRate, out var channelConfig, out _);
         if (parseResult.IsFailure) return Result<SoundFormatInfo>.Fail(parseResult.Error!);
-        
+
         info.ChannelCount = channelConfig;
         info.SampleRate = sampleRate;
-        
+
         var audioDataLength = stream.Length - audioDataStart;
 
         // For VBR/Unknown files, the only truly accurate method is to scan the entire file.
@@ -59,7 +59,7 @@ internal class AacReader : BaseSoundFormatReader
             {
                 // Each AAC frame contains 1024 samples. This is the most accurate way to calculate duration.
                 info.Duration = TimeSpan.FromSeconds((double)frameCount * 1024 / info.SampleRate);
-                
+
                 // The true average bitrate is the total audio data size divided by the exact duration.
                 if (info.Duration.TotalSeconds > 0) info.Bitrate = (int)(audioDataLength * 8 / info.Duration.TotalSeconds);
                 info.BitrateMode = BitrateMode.VBR;
@@ -89,18 +89,18 @@ internal class AacReader : BaseSoundFormatReader
     {
         long frameCount = 0;
         stream.Position = startOffset;
-        
+
         while (stream.Position < stream.Length)
         {
             var header = await FindNextFrameHeaderAsync(stream);
-            if (header == null) break; 
+            if (header == null) break;
 
             var parseResult = ParseFrameHeader(header, out _, out _, out var frameLength);
             if (parseResult.IsFailure) return (0, parseResult.Error);
             if (frameLength <= 7) continue;
 
             frameCount++;
-            
+
             var nextFramePosition = stream.Position - 7 + frameLength;
             if (nextFramePosition >= stream.Length || nextFramePosition <= stream.Position - 7) break;
 
@@ -114,7 +114,7 @@ internal class AacReader : BaseSoundFormatReader
         sampleRate = 0;
         channelConfig = 0;
         frameLength = 0;
-        
+
         var samplingIndex = (header[2] & 0x3C) >> 2;
         if (samplingIndex >= SampleRateTable.Length)
             return new CorruptFrameError("AAC", "Invalid sample rate index.");
@@ -125,7 +125,7 @@ internal class AacReader : BaseSoundFormatReader
 
         if (frameLength < 7) // A frame must be at least as big as its header
             return new CorruptFrameError("AAC", "Invalid frame length (less than header size).");
-        
+
         return Result.Ok();
     }
 
@@ -133,7 +133,7 @@ internal class AacReader : BaseSoundFormatReader
     {
         return buffer is [0xFF, _, ..] && (buffer[1] & 0xF0) == 0xF0;
     }
-    
+
     private async Task<byte[]?> FindNextFrameHeaderAsync(Stream stream)
     {
         var oneByteBuffer = new byte[1];
@@ -143,18 +143,18 @@ internal class AacReader : BaseSoundFormatReader
         while (streamPos < stream.Length - 1)
         {
             stream.Position = streamPos;
-            if (await stream.ReadAsync(oneByteBuffer.AsMemory(0, 1)) == 0) return null;
-            
+            if (stream.Read(oneByteBuffer, 0, 1) == 0) return null;
+
             if (oneByteBuffer[0] == 0xFF)
             {
-                if (await stream.ReadAsync(oneByteBuffer.AsMemory(0, 1)) == 0) return null;
-                
+                if (stream.Read(oneByteBuffer, 0, 1) == 0) return null;
+
                 if ((oneByteBuffer[0] & 0xF0) == 0xF0)
                 {
                     // Found a valid sync word. Read the rest of the header.
                     headerBuffer[0] = 0xFF;
                     headerBuffer[1] = oneByteBuffer[0];
-                    if (await stream.ReadAsync(headerBuffer.AsMemory(2, 5)) == 5)
+                    if (stream.Read(headerBuffer, 2, 5) == 5)
                     {
                         return headerBuffer;
                     }
